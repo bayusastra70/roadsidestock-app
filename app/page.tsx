@@ -32,7 +32,7 @@ export default async function DashboardPage() {
             <p className="text-xs text-gray-400 mt-1">Klik "+ Barang" untuk memulai</p>
           </div>
         ) : (
-          products.map((item) => (
+          products.map((item: any) => (
             <div 
               key={item.id} 
               className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center"
