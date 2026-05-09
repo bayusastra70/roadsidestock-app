@@ -1,90 +1,151 @@
 import prisma from "@/lib/prisma";
 import Link from "next/link";
-import DeleteButton from "@/components/DeleteButton"; // Sesuaikan path-nya
+import DeleteButton from "@/components/DeleteButton";
+import SearchInput from "@/components/SearchInput";
+import BottomNav from "@/components/BottomNav";
+import { jualAksi } from "./actions/product-actions";
 
-export default async function HomePage() {
+const CATEGORIES = ["Semua", "Sembako", "Minuman", "Makanan", "Rokok", "Alat Mandi", "Lainnya"];
+
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; cat?: string }>;
+}) {
+  const { q, cat } = await searchParams;
+  const currentCat = cat || "Semua";
+
+  // Data untuk Ringkasan
+  const allProducts = await prisma.product.findMany();
+  const totalAset = allProducts.reduce((acc, item) => acc + (item.stock * item.priceSell), 0);
+  
+  // Hitung Omzet Hari Ini
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  const transToday = await prisma.transaction.findMany({
+    where: { createdAt: { gte: startOfDay } }
+  });
+  const omzetHariIni = transToday.reduce((acc, curr) => acc + curr.totalPrice, 0);
+
   const products = await prisma.product.findMany({
+    where: {
+      AND: [
+        { name: { contains: q || "", mode: "insensitive" } },
+        currentCat !== "Semua" ? { category: currentCat } : {},
+      ],
+    },
     orderBy: { createdAt: "desc" },
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-32 font-sans text-black">
-      {/* Header */}
-      <div className="p-6 bg-white border-b border-gray-100 sticky top-0 z-10 flex justify-between items-center">
-        <div>
-          <h1 className="text-xl font-extrabold text-blue-600 leading-none">Roadside Stock</h1>
-          <p className="text-gray-400 text-[10px] mt-1 uppercase tracking-wider">Tabanan, Bali</p>
+    <div className="min-h-screen bg-gray-50 pb-40 font-sans text-black">
+      {/* HEADER STICKY */}
+      <div className="p-6 bg-white border-b border-gray-100 sticky top-0 z-10 flex flex-col gap-4 shadow-sm">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-xl font-black text-blue-600 italic">Roadside Stock</h1>
+            <p className="text-gray-400 text-[10px] uppercase font-bold tracking-tighter">Tabanan, Bali</p>
+          </div>
+          <Link href="/tambah" className="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </Link>
         </div>
-        <Link 
-          href="/tambah" 
-          className="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg shadow-blue-200 active:scale-90 transition-all"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        </Link>
+        <SearchInput defaultValue={q} />
       </div>
 
-      <div className="p-6">
-        <h2 className="text-lg font-bold mb-4">Stok Barang UMKM</h2>
+      <div className="p-6 space-y-6">
+        {/* FILTER KATEGORI */}
+        <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+          {CATEGORIES.map((c) => (
+            <Link 
+              key={c} 
+              href={`/?cat=${c}${q ? `&q=${q}` : ''}`} 
+              className={`px-5 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${currentCat === c ? "bg-blue-600 text-white" : "bg-white text-gray-400 border border-gray-100 shadow-sm"}`}
+            >
+              {c}
+            </Link>
+          ))}
+        </div>
 
+        {/* DASHBOARD STATS */}
+        {!q && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-green-600 p-4 rounded-[25px] text-white shadow-xl shadow-green-100">
+              <p className="text-[10px] font-bold opacity-70 uppercase">Omzet Hari Ini</p>
+              <p className="text-lg font-black">Rp {omzetHariIni.toLocaleString("id-ID")}</p>
+            </div>
+            <div className="bg-white p-4 rounded-[25px] border border-gray-100 shadow-sm">
+              <p className="text-[10px] font-bold text-gray-400 uppercase">Nilai Aset</p>
+              <p className="text-lg font-black text-gray-800">Rp {totalAset.toLocaleString("id-ID")}</p>
+            </div>
+          </div>
+        )}
+
+        {/* LIST PRODUK */}
         <div className="grid gap-4">
+          <h2 className="font-bold text-gray-700 text-sm flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-blue-600 rounded-full"></span>
+            Daftar Stok Barang
+          </h2>
           {products.length === 0 ? (
-            <div className="text-center py-20 border-2 border-dashed border-gray-200 rounded-3xl bg-white">
-              <p className="text-gray-400 text-sm">Belum ada barang.<br/>Klik tombol + di atas.</p>
+            <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
+              <p className="text-gray-400 text-sm font-medium">Barang tidak ditemukan</p>
             </div>
           ) : (
-            products.map((product) => (
-              <div 
-                key={product.id} 
-                className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 flex justify-between items-center transition-all"
-              >
-                <div>
-                  <h3 className="font-bold text-gray-800 text-base">{product.name}</h3>
-                  <div className="flex gap-2 mt-2">
-                    <span className="text-[11px] bg-blue-50 text-blue-600 px-3 py-1 rounded-full font-bold">
-                      {product.stock} Pcs
-                    </span>
-                    <span className="text-[11px] bg-green-50 text-green-600 px-3 py-1 rounded-full font-bold">
-                      Rp {product.priceSell.toLocaleString("id-ID")}
-                    </span>
+            products.map((product) => {
+              const isLowStock = product.stock <= product.minStock;
+              return (
+                <div key={product.id} className={`bg-white p-5 rounded-3xl shadow-sm border flex flex-col gap-4 transition-all ${isLowStock ? 'border-orange-200 bg-orange-50/20' : 'border-gray-100 hover:border-blue-100'}`}>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-bold text-gray-800 text-base">{product.name}</h3>
+                      <span className="text-[9px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md uppercase font-bold tracking-wider">{product.category}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Link href={`/edit/${product.id}`} className="p-2 bg-blue-50 text-blue-600 rounded-xl active:scale-90 transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                      </Link>
+                      <DeleteButton id={product.id} namaBarang={product.name} />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center border-t border-gray-50 pt-3">
+                    <div className="flex flex-col">
+                      <span className={`text-xs font-black ${isLowStock ? 'text-orange-600' : 'text-blue-600'}`}>
+                        {product.stock} Pcs {isLowStock && "⚠️"}
+                      </span>
+                      <span className="text-xs font-bold text-green-600">Rp {product.priceSell.toLocaleString("id-ID")}</span>
+                    </div>
+
+                    {/* FORM JUAL CEPAT */}
+                    <form action={jualAksi} className="flex bg-gray-50 rounded-2xl p-1 border border-gray-100 items-center">
+                      <input type="hidden" name="productId" value={product.id} />
+                      <input 
+                        name="qty" 
+                        type="number" 
+                        defaultValue="1" 
+                        min="1" 
+                        max={product.stock} 
+                        className="w-10 bg-transparent text-center text-sm font-bold outline-none" 
+                      />
+                      <button 
+                        type="submit" 
+                        disabled={product.stock <= 0}
+                        className={`px-4 py-2 rounded-xl text-[10px] font-black active:scale-95 transition-all ${product.stock <= 0 ? 'bg-gray-300 text-white' : 'bg-blue-600 text-white shadow-md shadow-blue-100'}`}
+                      >
+                        {product.stock <= 0 ? 'HABIS' : 'JUAL'}
+                      </button>
+                    </form>
                   </div>
                 </div>
-
-                {/* Tombol Hapus Client Component */}
-                <DeleteButton id={product.id} />
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
 
-      {/* Navigasi Bawah - Fixed & Styled */}
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-transparent pointer-events-none">
-        <div className="max-w-md mx-auto bg-white/90 backdrop-blur-xl border border-white shadow-2xl rounded-[35px] p-4 flex justify-around items-center pointer-events-auto">
-          {/* Home */}
-          <div className="flex flex-col items-center gap-1">
-            <div className="p-2 bg-blue-600 rounded-2xl text-white shadow-md shadow-blue-200">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-            </div>
-            <span className="text-[10px] font-bold text-blue-600">Beranda</span>
-          </div>
-
-          {/* Laporan */}
-          <div className="flex flex-col items-center gap-1 group opacity-40">
-            <div className="p-2 bg-gray-100 rounded-2xl text-gray-500">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-            </div>
-            <span className="text-[10px] font-bold text-gray-500">Laporan</span>
-          </div>
-
-          {/* Profil */}
-          <div className="flex flex-col items-center gap-1 opacity-40">
-            <div className="p-2 bg-gray-100 rounded-2xl text-gray-500">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            </div>
-            <span className="text-[10px] font-bold text-gray-500">Profil</span>
-          </div>
-        </div>
-      </div>
+      {/* RENDER BOTTOM NAV DISINI */}
+      <BottomNav />
     </div>
   );
 }
