@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = "postgresql://postgres:87Rte321123xc@db.lrcprlkxmuleybtpttuf.supabase.co:5432/postgres"
 }
 
 // 1. Model User untuk Login & Register
