@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = "postgresql://postgres:87Rte321123xc@db.lrcprlkxmuleybtpttuf.supabase.co:5432/postgres"
+}
+
+// 1. Model User untuk Login & Register
+model User {
+  id        String   @id @default(cuid())
+  nama      String
+  email     String   @unique
+  password  String
+  role      String   @default("PEDAGANG") // Untuk membedakan owner vs karyawan nantinya
+  warung    Warung?  // Satu user memiliki satu warung
+  createdAt DateTime @default(now())
+}
+
+// 2. Model Warung (Toko milik pedagang)
+model Warung {
+  id        String    @id @default(cuid())
+  nama      String
+  alamat    String?
+  userId    String    @unique // Menghubungkan ke User
+  user      User      @relation(fields: [userId], references: [id])
+  products  Product[]
+  createdAt DateTime  @default(now())
+}
+
+// 3. Model Product (Barang dagangan)
+model Product {
+  id        String   @id @default(cuid())
+  name      String
+  stock     Int      @default(0)
+  minStock  Int      @default(5)
+  priceBuy  Float
+  priceSell Float
+  warungId  String
+  warung    Warung   @relation(fields: [warungId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
