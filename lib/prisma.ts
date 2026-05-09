@@ -1,8 +1,9 @@
 import { PrismaClient } from '@prisma/client'
+import config from '../prisma.config' // Impor config Prisma 7 Bli
 
 const prismaClientSingleton = () => {
-  // KEMBALIKAN JADI KOSONG
-  return new PrismaClient()
+  // Prisma 7 butuh adapter atau konfigurasi dari prisma.config.ts
+  return new PrismaClient(config as any)
 }
 
 type PrismaClientSingleton = ReturnType<typeof prismaClientSingleton>
