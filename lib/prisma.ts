@@ -1,13 +1,8 @@
 import { PrismaClient } from '@prisma/client'
 
 const prismaClientSingleton = () => {
-  return new PrismaClient({
-    datasources: {
-      db: {
-        url: "postgresql://postgres:87Rte321123xc@db.lrcprlkxmuleybtpttuf.supabase.co:5432/postgres"
-      }
-    }
-  })
+  // KEMBALIKAN JADI KOSONG
+  return new PrismaClient()
 }
 
 type PrismaClientSingleton = ReturnType<typeof prismaClientSingleton>
