@@ -1,14 +1,8 @@
 import { PrismaClient } from '@prisma/client'
+import config from '../prisma.config'
 
 const prismaClientSingleton = () => {
-  return new PrismaClient({
-    datasources: {
-      db: {
-        // Kita panggil langsung variabel environment-nya di sini
-        url: process.env.DATABASE_URL 
-      },
-    },
-  })
+  return new PrismaClient(config as any)
 }
 
 type PrismaClientSingleton = ReturnType<typeof prismaClientSingleton>
