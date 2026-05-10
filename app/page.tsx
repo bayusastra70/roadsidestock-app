@@ -1,5 +1,7 @@
 import prisma from "@/lib/prisma";
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import DeleteButton from "@/components/DeleteButton";
 import SearchInput from "@/components/SearchInput";
 import BottomNav from "@/components/BottomNav";
@@ -12,23 +14,41 @@ export default async function HomePage({
 }: {
   searchParams: Promise<{ q?: string; cat?: string }>;
 }) {
+  // 1. CEK AUTHENTICATION (Cookies)
+  const cookieStore = await cookies();
+  const warungId = cookieStore.get("warungId")?.value;
+
+  // Jika tidak ada warungId (belum login), redirect ke halaman login
+  if (!warungId) {
+    redirect("/login");
+  }
+
   const { q, cat } = await searchParams;
   const currentCat = cat || "Semua";
 
-  // Data untuk Ringkasan
-  const allProducts = await prisma.product.findMany();
+  // 2. DATA RINGKASAN (Hanya milik warung ini)
+  const allProducts = await prisma.product.findMany({
+    where: { warungId: warungId }
+  });
+  
   const totalAset = allProducts.reduce((acc, item) => acc + (item.stock * item.priceSell), 0);
   
-  // Hitung Omzet Hari Ini
+  // 3. HITUNG OMZET HARI INI (Hanya milik warung ini)
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
+  
   const transToday = await prisma.transaction.findMany({
-    where: { createdAt: { gte: startOfDay } }
+    where: { 
+      product: { warungId: warungId }, // Filter lewat relasi produk
+      createdAt: { gte: startOfDay } 
+    }
   });
   const omzetHariIni = transToday.reduce((acc, curr) => acc + curr.totalPrice, 0);
 
+  // 4. DAFTAR PRODUK YANG DIFILTER (Hanya milik warung ini)
   const products = await prisma.product.findMany({
     where: {
+      warungId: warungId, // PROTEKSI DATA: Pastikan ID warung cocok
       AND: [
         { name: { contains: q || "", mode: "insensitive" } },
         currentCat !== "Semua" ? { category: currentCat } : {},
@@ -90,6 +110,7 @@ export default async function HomePage({
           {products.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
               <p className="text-gray-400 text-sm font-medium">Barang tidak ditemukan</p>
+              <p className="text-[10px] text-gray-300 mt-1">Silakan tambah barang baru Bli.</p>
             </div>
           ) : (
             products.map((product) => {
@@ -144,7 +165,6 @@ export default async function HomePage({
         </div>
       </div>
 
-      {/* RENDER BOTTOM NAV DISINI */}
       <BottomNav />
     </div>
   );
