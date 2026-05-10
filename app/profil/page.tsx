@@ -4,7 +4,7 @@ import BottomNav from "@/components/BottomNav";
 import { logoutAksi, getProfileData } from "../actions/auth-actions";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import Swal from "sweetalert2"; // Cukup satu import ini saja
+import Swal from "sweetalert2";
 
 export default function ProfilPage() {
   const router = useRouter();
@@ -32,7 +32,10 @@ export default function ProfilPage() {
       cancelButtonColor: "#6b7280",
       confirmButtonText: "Ya, Logout",
       cancelButtonText: "Batal",
-      borderRadius: "25px",
+      // Properti borderRadius dihapus karena menyebabkan error build TypeScript
+      customClass: {
+        popup: 'rounded-[25px]', // Gunakan ini jika ingin modifikasi lewat class Tailwind
+      }
     }).then(async (result) => {
       if (result.isConfirmed) {
         await logoutAksi();
@@ -42,7 +45,11 @@ export default function ProfilPage() {
     });
   };
 
-  if (!data) return <div className="p-10 text-center font-bold text-gray-400 animate-pulse">Memuat Profil...</div>;
+  if (!data) return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="p-10 text-center font-black text-blue-600 animate-pulse italic uppercase">Memuat Profil...</div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 pb-40 font-sans text-black">
@@ -76,8 +83,15 @@ export default function ProfilPage() {
           onClick={handleLogout}
           className="w-full bg-white text-red-600 p-5 rounded-[25px] font-black border border-red-100 shadow-sm active:scale-95 transition-all flex items-center justify-center gap-3 mt-8"
         >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
           LOGOUT DARI APLIKASI
         </button>
+        
+        <p className="text-center text-[10px] text-gray-300 font-black uppercase tracking-tighter pt-6">
+          Roadside Stock &copy; 2026 - Tabanan
+        </p>
       </div>
       <BottomNav />
     </div>

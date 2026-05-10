@@ -5,14 +5,16 @@ import { revalidatePath } from "next/cache";
 
 export async function hapusBarangAksi(id: string) {
   try {
-    await prisma.product.delete({
+    // Kita ubah statusnya jadi arsip agar data transaksi di laporan tidak rusak
+    await prisma.product.update({
       where: { id: id },
+      data: { isArchived: true }
     });
-    
-    // Memaksa halaman utama untuk mengambil data terbaru dari Supabase
+
     revalidatePath("/");
+    return { success: true };
   } catch (error) {
-    console.error("Gagal menghapus barang:", error);
-    throw new Error("Gagal menghapus data");
+    console.error("Gagal mengarsipkan barang:", error);
+    return { success: false, error: "Gagal menghapus data" };
   }
 }

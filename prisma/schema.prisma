@@ -37,6 +37,7 @@ model Product {
   minStock     Int           @default(5)
   priceBuy     Float
   priceSell    Float
+  isArchived  Boolean  @default(false)
   category     String        @default("Lainnya")
   warungId     String
   warung       Warung        @relation(fields: [warungId], references: [id], onDelete: Cascade)
