@@ -1,18 +1,15 @@
+// app/login/page.tsx
 "use client";
 
 import { loginAksi } from "../actions/auth-actions";
 import Link from "next/link";
 import { useActionState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 
 export default function LoginPage() {
-  // Gunakan loginAksi yang sudah diperbaiki
   const [state, formAction, isPending] = useActionState(loginAksi, null);
-  const router = useRouter();
 
   useEffect(() => {
-    // Jika ada error dari server
     if (state?.error) {
       Swal.fire({
         icon: "error",
@@ -21,12 +18,12 @@ export default function LoginPage() {
         confirmButtonColor: "#2563eb",
       });
     }
-    // Jika sukses
+    
     if (state?.success) {
-      router.push("/");
-      router.refresh();
+      // Gunakan ini khusus untuk iOS/PWA agar cookie segar terbaca
+      window.location.href = "/"; 
     }
-  }, [state, router]);
+  }, [state]);
 
   return (
     <div className="min-h-screen bg-white p-8 flex flex-col justify-center font-sans text-black">
@@ -57,7 +54,7 @@ export default function LoginPage() {
         <button 
           disabled={isPending}
           type="submit" 
-          className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black shadow-xl shadow-blue-100 active:scale-95 disabled:bg-gray-300 transition-all mt-4"
+          className="w-full bg-blue-600 text-white p-5 rounded-[25px] font-black shadow-xl shadow-blue-100 active:scale-95 disabled:bg-gray-300 transition-all mt-4 touch-manipulation"
         >
           {isPending ? "MENGECEK..." : "MASUK SEKARANG"}
         </button>
