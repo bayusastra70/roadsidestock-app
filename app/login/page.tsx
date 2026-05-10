@@ -17,12 +17,12 @@ export default function LoginPage() {
         confirmButtonColor: "#2563eb",
       });
     }
-    
-    if (state?.success) {
-      // Hard redirect untuk memastikan cookie session terbaca di iOS PWA
-      window.location.replace("/"); 
-    }
-  }, [state]);
+  if (state?.success) {
+    // Di Next.js 16 iOS, window.location.href kadang di-cache. 
+    // Kita tambahkan timestamp unik agar browser menganggap ini URL baru.
+    window.location.href = `/?v=${new Date().getTime()}`;
+  }
+}, [state]); 
 
   return (
     <div className="min-h-screen bg-white p-8 flex flex-col justify-center font-sans text-black">
