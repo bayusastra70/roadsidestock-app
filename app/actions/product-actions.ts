@@ -3,35 +3,33 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers"; // Import cookies
 
 export async function tambahAksi(formData: FormData) {
+  // 1. Ambil warungId dari cookie (Proteksi data)
+  const cookieStore = await cookies();
+  const warungId = cookieStore.get("warungId")?.value;
+
+  if (!warungId) {
+    throw new Error("Sesi habis, silakan login lagi Bli.");
+  }
+
   const name = formData.get("nama") as string;
   const priceSell = Number(formData.get("harga"));
   const stock = Number(formData.get("stok")) || 0;
   const category = formData.get("category") as string;
+  const minStock = Number(formData.get("minStock")) || 5; // Tambahkan minStock biar warning-nya jalan
 
-  let warung = await prisma.warung.findFirst();
-  if (!warung) {
-    const userDefault = await prisma.user.create({
-      data: {
-        nama: "Owner Roadside",
-        email: `owner-${Date.now()}@roadsidestock.com`,
-        password: "password123",
-        warung: { create: { nama: "Warung Utama", alamat: "Tabanan" } }
-      },
-      include: { warung: true }
-    });
-    warung = userDefault.warung!;
-  }
-
+  // 2. Simpan barang sesuai warungId yang sedang login
   await prisma.product.create({
     data: {
       name,
       stock,
       priceSell,
-      priceBuy: priceSell * 0.8,
+      priceBuy: priceSell * 0.8, // Otomatisasi modal 80% dari harga jual
       category,
-      warungId: warung.id,
+      minStock,
+      warungId: warungId, // PAKAI ID DARI COOKIE
     }
   });
 
@@ -55,19 +53,30 @@ export async function editBarangAksi(formData: FormData) {
   redirect("/");
 }
 
-// FITUR BARU: JUAL CEPAT
 export async function jualAksi(formData: FormData) {
   const productId = formData.get("productId") as string;
   const qty = Number(formData.get("qty"));
 
-  const product = await prisma.product.findUnique({ where: { id: productId } });
-  if (!product || product.stock < qty) return;
+  // 1. Cari produknya dulu
+  const product = await prisma.product.findUnique({ 
+    where: { id: productId } 
+  });
+  
+  // 2. Validasi stok
+  if (!product || product.stock < qty) {
+    // Karena ini dipanggil langsung dari form action, kita tidak bisa return error ke state
+    // Tapi kita bisa cegah prosesnya
+    return;
+  }
 
+  // 3. Jalankan Transaksi
   await prisma.$transaction([
+    // Kurangi stok produk
     prisma.product.update({
       where: { id: productId },
       data: { stock: { decrement: qty } }
     }),
+    // Catat riwayat penjualan
     prisma.transaction.create({
       data: {
         productId,
@@ -77,5 +86,6 @@ export async function jualAksi(formData: FormData) {
     })
   ]);
 
+  // 4. Segarkan data Dashboard
   revalidatePath("/");
 }
