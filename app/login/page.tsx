@@ -1,4 +1,3 @@
-// app/login/page.tsx
 "use client";
 
 import { loginAksi } from "../actions/auth-actions";
@@ -20,8 +19,8 @@ export default function LoginPage() {
     }
     
     if (state?.success) {
-      // Gunakan ini khusus untuk iOS/PWA agar cookie segar terbaca
-      window.location.href = "/"; 
+      // Hard redirect untuk memastikan cookie session terbaca di iOS PWA
+      window.location.replace("/"); 
     }
   }, [state]);
 

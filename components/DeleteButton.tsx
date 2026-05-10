@@ -1,4 +1,3 @@
-// components/DeleteButton.tsx
 "use client";
 
 import { useState } from "react";
@@ -8,11 +7,16 @@ export default function DeleteButton({ id, namaBarang }: { id: string; namaBaran
   const [isOpen, setIsOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // iOS butuh fungsi yang dipicu secara eksplisit
   const toggleModal = (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation(); // Mencegah klik tembus ke parent/card
+    setIsOpen(true);
+  };
+
+  const closePortal = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
-    setIsOpen(!isOpen);
+    setIsOpen(false);
   };
 
   const handleConfirm = async (e: React.MouseEvent) => {
@@ -22,6 +26,7 @@ export default function DeleteButton({ id, namaBarang }: { id: string; namaBaran
     try {
       await hapusBarangAksi(id);
       setIsOpen(false);
+      window.location.reload(); // Refresh data setelah hapus (Soft Delete)
     } catch (err) {
       alert("Gagal hapus, Bli!");
     } finally {
@@ -30,7 +35,7 @@ export default function DeleteButton({ id, namaBarang }: { id: string; namaBaran
   };
 
   return (
-    <div className="relative">
+    <>
       <button 
         type="button"
         onClick={toggleModal}
@@ -41,22 +46,29 @@ export default function DeleteButton({ id, namaBarang }: { id: string; namaBaran
 
       {isOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-6">
-          {/* Backdrop gelap pekat agar Safari fokus */}
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-md" onClick={() => setIsOpen(false)} />
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm" 
+            onClick={closePortal} 
+          />
           
-          <div className="relative bg-white w-full max-w-xs rounded-[35px] p-8 text-center shadow-2xl overflow-hidden">
-            <h3 className="font-black text-lg mb-2">Hapus {namaBarang}?</h3>
+          <div className="relative bg-white w-full max-w-xs rounded-[35px] p-8 text-center shadow-2xl animate-in fade-in zoom-in duration-200">
+            <h3 className="font-black text-lg mb-2 text-black">Hapus {namaBarang}?</h3>
+            <p className="text-gray-500 text-xs font-bold uppercase tracking-tight">Data akan diarsipkan (Soft Delete)</p>
+            
             <div className="flex flex-col gap-3 mt-6">
               <button 
+                type="button"
                 onClick={handleConfirm}
                 disabled={isDeleting}
-                className="bg-red-500 text-white p-4 rounded-2xl font-black active:scale-95 disabled:opacity-50"
+                className="bg-red-500 text-white p-4 rounded-2xl font-black active:scale-95 disabled:opacity-50 touch-manipulation"
               >
                 {isDeleting ? "PROSES..." : "YA, HAPUS"}
               </button>
               <button 
-                onClick={() => setIsOpen(false)}
-                className="bg-gray-100 text-gray-500 p-4 rounded-2xl font-black active:scale-95"
+                type="button"
+                onClick={closePortal}
+                className="bg-gray-100 text-gray-500 p-4 rounded-2xl font-black active:scale-95 touch-manipulation"
               >
                 BATAL
               </button>
@@ -64,6 +76,6 @@ export default function DeleteButton({ id, namaBarang }: { id: string; namaBaran
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
